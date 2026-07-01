@@ -41,5 +41,5 @@ jobs:
           git add .
           git commit -m "persist tokens trigger by ${{ github.event_name }}" || exit 0
 
-          git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git
+          git remote set-url origin "https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}.git"
           git push origin HEAD:${{ github.ref_name }}
