@@ -57,6 +57,29 @@ function hours_except_now {
   echo "$result"
 }
 
+function random_minute_for_hours {
+  cron_hours=$1
+  minute=$(TZ=UTC date '+%M')
+  minute=$((10#$minute))
+  hour=$(TZ=UTC date '+%H')
+  hour=$((10#$hour))
+
+  current_hour_in_cron=$(echo "$cron_hours" | awk -v hour="$hour" -F ',' '{
+    for (i=1;i<=NF;i++) {
+      if ($i==hour) {
+        print "true"
+        break
+      }
+    }
+  }')
+
+  if test "$current_hour_in_cron" = "true"; then
+    echo $((RANDOM % (minute + 1)))
+  else
+    echo $((RANDOM % 60))
+  fi
+}
+
 function convert_utc_to_shanghai {
   local cron_str=$1
   echo "UTC时间: ${cron_str}"
@@ -97,9 +120,10 @@ function persist_execute_log {
   current_cron=$(< .github/workflows/run.yml grep cron|awk '{print substr($0, index($0,$3))}')
   cron_hours=$(inspect_hours "$current_cron")
   if test -n "$new_cron_hours"; then
-    cron_hours=$(hours_except_now "$new_cron_hours")
+    cron_hours=$new_cron_hours
   fi
-  "${sed_prefix[@]}" -E "s/(- cron: ')[0-9]+( [^[:space:]]+ \* \* \*')/\1$((RANDOM % 59)) ${cron_hours} * * *'/g" .github/workflows/run.yml
+  cron_minute=$(random_minute_for_hours "$cron_hours")
+  "${sed_prefix[@]}" -E "s/(- cron: ')[0-9]+( [^[:space:]]+ \* \* \*')/\1${cron_minute} ${cron_hours} * * *'/g" .github/workflows/run.yml
   current_cron=$(< .github/workflows/run.yml grep cron|awk '{print substr($0, index($0,$3))}')
   {
     echo "next cron:"
@@ -108,4 +132,3 @@ function persist_execute_log {
   } >> cron_change_time
 
 }
-
